@@ -1,0 +1,90 @@
+{{define "run_row"}}
+<tr id="run-{{.Run.ID}}" class="hover:bg-gray-50 transition-colors">
+    <td class="px-4 py-3 whitespace-nowrap">
+        <div class="flex items-center space-x-2">
+            {{statusIcon .Run.Status .Run.Conclusion}}
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full
+                {{if eq (statusColor .Run.Status .Run.Conclusion) "green"}}bg-green-100 text-green-700
+                {{else if eq (statusColor .Run.Status .Run.Conclusion) "red"}}bg-red-100 text-red-700
+                {{else if eq (statusColor .Run.Status .Run.Conclusion) "yellow"}}bg-yellow-100 text-yellow-700
+                {{else if eq (statusColor .Run.Status .Run.Conclusion) "blue"}}bg-blue-100 text-blue-700
+                {{else}}bg-gray-100 text-gray-700{{end}}">
+                {{.Run.StatusLabel}}
+            </span>
+        </div>
+    </td>
+    <td class="px-4 py-3 whitespace-nowrap">
+        <a href="/repos/{{.Owner}}/{{.RepoName}}/runs/{{.Run.ID}}"
+           class="text-sm font-medium text-blue-600 hover:text-blue-800">
+            {{.Run.WorkflowName}} #{{.Run.RunNumber}}
+        </a>
+    </td>
+    <td class="px-4 py-3 whitespace-nowrap">
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+            {{.Run.HeadBranch}}
+        </span>
+    </td>
+    <td class="px-4 py-3 whitespace-nowrap">
+        <code class="text-xs text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded">{{shortSHA .Run.HeadSHA}}</code>
+    </td>
+    <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
+        {{.Run.Event}}
+    </td>
+    <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
+        {{timeAgo .Run.UpdatedAt}}
+    </td>
+    <td class="px-4 py-3 whitespace-nowrap text-right">
+        <div class="flex items-center justify-end space-x-1">
+            {{if eq .Run.Status "completed"}}
+            <button hx-post="/repos/{{.Owner}}/{{.RepoName}}/runs/{{.Run.ID}}/rerun"
+                    hx-swap="innerHTML"
+                    hx-target="#toast-container"
+                    class="inline-flex items-center p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    title="Re-run">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+            </button>
+            {{if eq .Run.Conclusion "failure"}}
+            <button hx-post="/repos/{{.Owner}}/{{.RepoName}}/runs/{{.Run.ID}}/rerun-failed"
+                    hx-swap="innerHTML"
+                    hx-target="#toast-container"
+                    class="inline-flex items-center p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
+                    title="Re-run failed jobs">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                </svg>
+            </button>
+            {{end}}
+            <a href="/repos/{{.Owner}}/{{.RepoName}}/runs/{{.Run.ID}}/logs"
+               class="inline-flex items-center p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+               title="View logs">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </a>
+            {{else if eq .Run.Status "in_progress"}}
+            <button hx-post="/repos/{{.Owner}}/{{.RepoName}}/runs/{{.Run.ID}}/cancel"
+                    hx-swap="innerHTML"
+                    hx-target="#toast-container"
+                    class="inline-flex items-center p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                    title="Cancel">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+            {{end}}
+            {{if .Run.HTMLURL}}
+            <a href="{{.Run.HTMLURL}}" target="_blank" rel="noopener"
+               class="inline-flex items-center p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+               title="View on GitHub">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/>
+                    <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/>
+                </svg>
+            </a>
+            {{end}}
+        </div>
+    </td>
+</tr>
+{{end}}

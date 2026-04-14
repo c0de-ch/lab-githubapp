@@ -1,0 +1,108 @@
+{{define "repo"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{template "repo_content" .}}
+{{end}}
+
+{{define "repo_content"}}
+<div class="space-y-6" hx-ext="sse" sse-connect="/api/sse/repos/{{.Owner}}/{{.RepoName}}">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center space-x-2 text-sm text-gray-500">
+        <a href="/" class="hover:text-gray-700">Dashboard</a>
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+        </svg>
+        <span class="text-gray-900 font-medium">{{.Owner}}/{{.RepoName}}</span>
+    </nav>
+
+    <!-- Repository header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{.Owner}}/{{.RepoName}}</h1>
+            <p class="mt-1 text-sm text-gray-500">Manage workflows and monitor runs</p>
+        </div>
+        <div class="flex items-center space-x-3">
+            <a href="/repos/{{.Owner}}/{{.RepoName}}/runs"
+               class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                View All Runs
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Workflows panel -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                    <h2 class="text-sm font-semibold text-gray-900">Workflows</h2>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    {{if .Workflows}}
+                    {{range .Workflows}}
+                    <div class="px-4 py-3" x-data="{ showDispatch: false }">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">{{.Name}}</p>
+                                <p class="text-xs text-gray-500 truncate">{{.Path}}</p>
+                            </div>
+                            <button @click="showDispatch = !showDispatch"
+                                    class="ml-2 inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">
+                                <svg class="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Run
+                            </button>
+                        </div>
+                        <!-- Dispatch form -->
+                        <div x-show="showDispatch" x-transition class="mt-3 pt-3 border-t border-gray-100">
+                            <form hx-post="/repos/{{$.Owner}}/{{$.RepoName}}/workflows/{{.ID}}/dispatch"
+                                  hx-target="#toast-container"
+                                  hx-swap="innerHTML"
+                                  class="space-y-3">
+                                <input type="hidden" name="workflow_file" value="{{.Path}}">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Branch / Tag</label>
+                                    <input type="text" name="ref" value="main"
+                                           class="block w-full rounded-md border-gray-300 shadow-sm text-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-1.5 border">
+                                </div>
+                                <button type="submit"
+                                        class="w-full inline-flex justify-center items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    <span class="htmx-indicator mr-2">
+                                        <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                        </svg>
+                                    </span>
+                                    Dispatch Workflow
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {{end}}
+                    {{else}}
+                    <div class="px-4 py-8 text-center text-sm text-gray-500">
+                        No workflows found
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent runs panel -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                    <h2 class="text-sm font-semibold text-gray-900">Recent Runs</h2>
+                    <span class="text-xs text-gray-500">Auto-updates via SSE</span>
+                </div>
+                <div id="runs-container">
+                    {{template "runs_table" (dict "Runs" .Runs "Owner" .Owner "RepoName" .RepoName)}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

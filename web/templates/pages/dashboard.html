@@ -1,0 +1,45 @@
+{{define "dashboard"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{template "dashboard_content" .}}
+{{end}}
+
+{{define "dashboard_content"}}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p class="mt-1 text-sm text-gray-500">Repositories with the GitHub App installed</p>
+        </div>
+        <div class="flex items-center space-x-2 text-sm text-gray-500">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+            </svg>
+            <span>{{len .Repos}} repositories</span>
+            <span class="mx-2">|</span>
+            <span>{{len .Installations}} installations</span>
+        </div>
+    </div>
+
+    {{if .Repos}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {{range .Repos}}
+        {{template "repo_card" .}}
+        {{end}}
+    </div>
+    {{else}}
+    <div class="text-center py-16 bg-white rounded-lg border border-gray-200">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+        </svg>
+        <h3 class="mt-4 text-lg font-medium text-gray-900">No repositories yet</h3>
+        <p class="mt-2 text-sm text-gray-500 max-w-md mx-auto">
+            Install the GitHub App on your repositories to start managing workflows.
+            The app will automatically discover repositories after installation.
+        </p>
+    </div>
+    {{end}}
+</div>
+{{end}}

@@ -1,0 +1,30 @@
+/* Additional custom styles beyond Tailwind CDN */
+
+/* Smooth page transitions with htmx */
+.htmx-settling {
+    opacity: 0.8;
+}
+
+.htmx-swapping {
+    opacity: 0.5;
+    transition: opacity 0.15s ease-out;
+}
+
+/* Log viewer enhancements */
+.log-viewer::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.log-viewer::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+
+.log-viewer::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 4px;
+}
+
+.log-viewer::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}

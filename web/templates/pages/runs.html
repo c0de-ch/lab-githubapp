@@ -1,0 +1,54 @@
+{{define "runs"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="space-y-6" hx-ext="sse" sse-connect="/api/sse/repos/{{.Owner}}/{{.RepoName}}">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center space-x-2 text-sm text-gray-500">
+        <a href="/" class="hover:text-gray-700">Dashboard</a>
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+        </svg>
+        <a href="/repos/{{.Owner}}/{{.RepoName}}" class="hover:text-gray-700">{{.Owner}}/{{.RepoName}}</a>
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+        </svg>
+        <span class="text-gray-900 font-medium">Runs</span>
+    </nav>
+
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-900">Workflow Runs</h1>
+        <!-- Status filter -->
+        <div class="flex items-center space-x-2">
+            <a href="/repos/{{.Owner}}/{{.RepoName}}/runs"
+               hx-get="/repos/{{.Owner}}/{{.RepoName}}/runs"
+               hx-target="#runs-container"
+               hx-push-url="true"
+               class="px-3 py-1.5 text-sm rounded-md {{if eq .Status ""}}bg-gray-900 text-white{{else}}bg-white text-gray-700 border border-gray-300 hover:bg-gray-50{{end}}">
+                All
+            </a>
+            <a href="/repos/{{.Owner}}/{{.RepoName}}/runs?status=in_progress"
+               hx-get="/repos/{{.Owner}}/{{.RepoName}}/runs?status=in_progress"
+               hx-target="#runs-container"
+               hx-push-url="true"
+               class="px-3 py-1.5 text-sm rounded-md {{if eq .Status "in_progress"}}bg-yellow-500 text-white{{else}}bg-white text-gray-700 border border-gray-300 hover:bg-gray-50{{end}}">
+                In Progress
+            </a>
+            <a href="/repos/{{.Owner}}/{{.RepoName}}/runs?status=completed"
+               hx-get="/repos/{{.Owner}}/{{.RepoName}}/runs?status=completed"
+               hx-target="#runs-container"
+               hx-push-url="true"
+               class="px-3 py-1.5 text-sm rounded-md {{if eq .Status "completed"}}bg-green-600 text-white{{else}}bg-white text-gray-700 border border-gray-300 hover:bg-gray-50{{end}}">
+                Completed
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div id="runs-container">
+            {{template "runs_table" .}}
+        </div>
+    </div>
+</div>
+{{end}}
