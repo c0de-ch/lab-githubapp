@@ -240,34 +240,94 @@ lab-githubapp/
 
 ## How It Works
 
-### Webhook Flow
+This is a control panel for GitHub Actions. Once you install it as a GitHub App on
+some repositories, it shows a dashboard of those repos, lists each repo's workflows
+and lets you trigger them, tracks workflow runs and their jobs/steps in real time, lets
+you re-run (all or failed-only) and cancel runs, and displays run logs.
+
+It's a single Go binary with **no web framework** — just `net/http`, server-rendered
+HTML templates, and htmx for interactivity. Everything (templates, CSS, JS) is embedded
+into the binary via `go:embed`, and state lives in an embedded SQLite database
+(`modernc.org/sqlite`, pure Go, no CGo).
+
+There are two ways data flows through the app: **GitHub pushes webhooks to it**, and
+**the user clicks things in the browser** which call the GitHub API outward.
+
+### Startup & Wiring (`main.go`)
+
+`run()` wires everything together with manual dependency injection:
+
+1. Load and validate config from the environment (`internal/config`)
+2. Open and migrate the SQLite database
+3. Build the GitHub auth provider and API client
+4. Start the SSE broker goroutine
+5. Kick off a one-time `SyncInstallations` in the background, so the app discovers
+   existing installations even without waiting for a fresh webhook
+6. Load templates (from disk when `DEV_MODE=true`, otherwise from the embedded FS)
+7. Start the HTTP server
+
+It listens for `SIGINT`/`SIGTERM` and shuts down gracefully with a 10-second timeout.
+
+### GitHub App Authentication (`internal/github/auth.go`)
+
+The app uses the standard two-tier GitHub App authentication flow:
+
+1. **App-level**: An RSA private key signs a short-lived JWT (RS256, 10-minute expiry)
+   that identifies the app itself — used for app-level calls like listing installations.
+2. **Installation-level**: That JWT is exchanged for a 1-hour installation access token
+   (auto-refreshed), scoped to the specific repositories where the app is installed.
+
+This is handled by `bradleyfalzon/ghinstallation`, which is plugged in as an
+`http.RoundTripper`, so token minting and refresh happen transparently on every API
+call. `AuthProvider` caches one transport per installation ID (with double-checked
+locking) so tokens get reused across requests.
+
+### Inbound Flow: Webhooks (`internal/webhook/`)
+
+When something happens on GitHub (a run starts, a job finishes, the app is installed
+somewhere):
 
 1. GitHub sends a webhook event to `POST /api/webhooks/github`
-2. The server verifies the `X-Hub-Signature-256` HMAC-SHA256 signature
-3. The event is parsed and routed based on `X-GitHub-Event` header
+2. The server verifies the `X-Hub-Signature-256` HMAC-SHA256 signature against your
+   webhook secret (`verify.go`)
+3. `EventProcessor.Process` routes on the `X-GitHub-Event` header. It handles four
+   event types (`events.go`):
+   - `installation` — upsert/delete the installation and its repos
+   - `installation_repositories` — add/remove individual repos
+   - `workflow_run` — upsert the run record
+   - `workflow_job` — upsert the job record (steps stored as JSON)
 4. State is persisted to SQLite (installations, repos, runs, jobs)
-5. An SSE event is broadcast to all connected browsers
+5. For run/job events, an SSE event is published to a topic like `repo:owner/name`
 6. htmx picks up the SSE event and swaps the updated HTML partial into the page
 
-### GitHub App Authentication
+### Real-time Updates (`internal/sse/broker.go`)
 
-The app uses the standard GitHub App authentication flow:
-
-1. **App-level**: RSA private key generates a JWT (RS256, 10-minute expiry) for app-level API calls (listing installations)
-2. **Installation-level**: The JWT is exchanged for a short-lived installation access token (1-hour, auto-refreshed) scoped to specific repositories
-
-This is handled by `ghinstallation`, which implements `http.RoundTripper` for transparent token management.
-
-### Real-time Updates
-
-The SSE broker is a goroutine-based fan-out system:
+The SSE broker is a goroutine-based pub/sub fan-out. A single `Run` loop owns a
+`map[topic] → set of client channels` and serializes register/unregister/broadcast over
+channels, so there are no data races.
 
 - Each browser tab subscribes to a topic (e.g., `repo:owner/name`)
-- When a webhook arrives, the event processor publishes an HTML partial to the broker
+- When a webhook arrives, the event processor publishes to the broker
 - The broker fans out to all subscribed clients
 - htmx's SSE extension swaps the partial into the matching DOM element
 
+When broadcasting, if a client's channel buffer is full the event is **dropped for that
+client** (a non-blocking `select` with a `default` case) rather than blocking everyone —
+so a slow browser can't stall the broker.
+
 No polling. No WebSocket complexity. Just standard HTTP streaming.
+
+### Outbound Flow: The Web UI (`internal/server`, `internal/handler`)
+
+Routes use Go 1.22+ method + path pattern routing (e.g.
+`GET /repos/{owner}/{repo}/runs/{runID}`). Handlers render server-side HTML templates.
+The action endpoints — dispatch, rerun, rerun-failed, cancel — call the GitHub Actions
+API outward using the per-installation client. Two SSE endpoints (`/api/sse/...`) let a
+repo page or a run page subscribe to live updates.
+
+Pages are full HTML; htmx fetches partials (`web/templates/partials/`) to swap pieces of
+the page without a full reload, and Alpine.js handles small client-side bits like
+dropdowns and tabs.
 
 ## Docker
 
